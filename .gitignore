@@ -1,0 +1,17 @@
+# Git Ignore File
+
+# Dependencies
+/node_modules
+/npm-debug.log
+/yarn-error.log
+
+# Build Artifacts
+/dist
+
+# Editor and Tooling files
+.DS_Store
+.vscode/
+
+# Environment files
+.env
+.env.local
