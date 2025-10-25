@@ -1,6 +1,6 @@
 {
   "name": "supametrics",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A simple React analytics component.",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -11,7 +11,6 @@
     "build": "babel src --out-dir dist --copy-files --extensions \".js,.jsx\"",
     "prepublishOnly": "npm run build"
   },
-  "dependencies": {},
   "peerDependencies": {
     "react": ">=16.8.0"
   },
@@ -19,6 +18,8 @@
     "@babel/cli": "^7.23.4",
     "@babel/core": "^7.23.7",
     "@babel/preset-env": "^7.23.8",
-    "@babel/preset-react": "^7.23.3"
+    "@babel/preset-react": "^7.23.3",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2"
   }
 }

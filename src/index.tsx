@@ -1,17 +1,29 @@
 import React, { useEffect, useRef, useCallback } from "react";
-import { sendLogRequest, getUTMParams } from "./core";
+import { sendLogRequest, getUTMParams, UTMParams, EventData } from "./core";
 
-const Analytics = ({ client, url, path }) => {
-  const currentPath = path || window.location.pathname;
-  const startTimeRef = useRef(performance.now());
+interface AnalyticsProps {
+  client: string;
+  url: string;
+  path?: string;
+}
 
-  const logPageDuration = useCallback(() => {
-    const durationMs = performance.now() - startTimeRef.current;
-    const durationSeconds = Math.floor(durationMs / 1000);
+interface PageDurationEventData extends EventData {
+  event_name: "page_duration";
+  duration: number;
+}
+
+const Analytics = ({ client, url, path }: AnalyticsProps) => {
+  const currentPath: string = path || window.location.pathname;
+
+  const startTimeRef = useRef<number>(performance.now());
+
+  const logPageDuration = useCallback((): void => {
+    const durationMs: number = performance.now() - startTimeRef.current;
+    const durationSeconds: number = Math.floor(durationMs / 1000);
 
     if (durationSeconds < 1) return;
 
-    const eventData = {
+    const eventData: PageDurationEventData = {
       pathname: currentPath,
       referrer: document.referrer || null,
       ...getUTMParams(),
@@ -24,7 +36,7 @@ const Analytics = ({ client, url, path }) => {
   }, [client, url, currentPath]);
 
   useEffect(() => {
-    const initialData = {
+    const initialData: EventData = {
       pathname: currentPath,
       referrer: document.referrer || null,
       ...getUTMParams(),
