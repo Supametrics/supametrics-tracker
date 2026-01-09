@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useCallback } from "react";
-import { sendLogRequest, getUTMParams, UTMParams, EventData } from "./core";
+import React, { useEffect, useCallback } from "react";
+import { sendLogRequest, getUTMParams, EventData } from "./core";
 
 interface AnalyticsProps {
   client: string;
@@ -7,29 +7,20 @@ interface AnalyticsProps {
   path?: string;
 }
 
-interface PageDurationEventData extends EventData {
-  event_name: "page_duration";
-  duration: number;
-}
+const sessionId = crypto.randomUUID();
+const pageLoadTime = Date.now();
 
 const Analytics = ({ client, url, path }: AnalyticsProps) => {
   const currentPath: string = path || window.location.pathname;
 
-  const startTimeRef = useRef<number>(performance.now());
+  const logExitEvent = useCallback((): void => {
+    const durationSeconds = Math.round((Date.now() - pageLoadTime) / 1000);
 
-  const logPageDuration = useCallback((): void => {
-    const durationMs: number = performance.now() - startTimeRef.current;
-    const durationSeconds: number = Math.floor(durationMs / 1000);
-
-    if (durationSeconds < 1) return;
-
-    const eventData: PageDurationEventData = {
-      pathname: currentPath,
-      referrer: document.referrer || null,
-      ...getUTMParams(),
-      event_type: "page_view",
-      event_name: "page_duration",
+    const eventData: EventData = {
+      eventType: "exit",
+      session_id: sessionId,
       duration: durationSeconds,
+      pathname: currentPath,
     };
 
     sendLogRequest(url, client, eventData);
@@ -37,27 +28,41 @@ const Analytics = ({ client, url, path }: AnalyticsProps) => {
 
   useEffect(() => {
     const initialData: EventData = {
+      eventType: "pageview",
+      session_id: sessionId,
       pathname: currentPath,
+      hostname: window.location.hostname,
       referrer: document.referrer || null,
       ...getUTMParams(),
-      event_type: "page_view",
-      event_name: "page_view",
-      duration: 0,
     };
 
     sendLogRequest(url, client, initialData);
 
-    window.addEventListener("beforeunload", logPageDuration);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        logExitEvent();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    const heartbeatInterval = setInterval(() => {
+      const durationSeconds = Math.round((Date.now() - pageLoadTime) / 1000);
+      const pingData: EventData = {
+        eventType: "ping",
+        session_id: sessionId,
+        duration: durationSeconds,
+        pathname: currentPath,
+      };
+      sendLogRequest(url, client, pingData);
+    }, 60000);
 
     return () => {
-      window.removeEventListener("beforeunload", logPageDuration);
-      logPageDuration();
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(heartbeatInterval);
+      logExitEvent();
     };
-  }, [client, url, currentPath, logPageDuration]);
-
-  useEffect(() => {
-    startTimeRef.current = performance.now();
-  }, [currentPath]);
+  }, [client, url, currentPath, logExitEvent]);
 
   return null;
 };

@@ -4,12 +4,13 @@ export interface UTMParams {
   utm_campaign: string | null;
 }
 
-export interface EventData extends UTMParams {
+export interface EventData extends Partial<UTMParams> {
+  eventType: "pageview" | "exit" | "ping";
+  session_id: string;
   pathname: string;
-  referrer: string | null;
-  event_type: "page_view" | string;
-  event_name: "page_view" | "page_duration" | string;
-  duration: number;
+  hostname?: string;
+  referrer?: string | null;
+  duration?: number;
 }
 
 export const getUTMParams = (): UTMParams => {
@@ -28,8 +29,6 @@ export const sendLogRequest = (
 ): void => {
   const endpoint: string = `${url.replace(/\/+$/, "")}/api/v1/analytics/log`;
 
-  const isBeacon: boolean = eventData.event_name === "page_duration";
-
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-Public-Key": clientKey,
@@ -37,9 +36,12 @@ export const sendLogRequest = (
 
   const body: string = JSON.stringify(eventData);
 
-  if (isBeacon && navigator.sendBeacon) {
-    const blob: Blob = new Blob([body], { type: headers["Content-Type"] });
-    navigator.sendBeacon(endpoint, blob);
+  if (eventData.eventType === "exit" && navigator.sendBeacon) {
+    const blob: Blob = new Blob([body], { type: "application/json" });
+
+    const beaconUrl = new URL(endpoint);
+    beaconUrl.searchParams.append("publicKey", clientKey);
+    navigator.sendBeacon(beaconUrl.toString(), blob);
   } else {
     fetch(endpoint, {
       method: "POST",
@@ -47,7 +49,7 @@ export const sendLogRequest = (
       body: body,
       keepalive: true,
     })
-      .then((response: Response) => {})
-      .catch((error: any) => {});
+      .then(() => {})
+      .catch(() => {});
   }
 };
